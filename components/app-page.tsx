@@ -72,8 +72,14 @@ export function AppPage() {
       setTime((prevTime) => {
         if (prevTime < timeLimit) {
           // 残り時間3分前になったら、音声ファイルを再生
-          if (timeLimit - prevTime === 4 * 60 && !audioPlayed.current) {
-            const audio = new Audio('/sound/Bell_Accent_High.mp3'); // 音声ファイルのパスを指定
+          if (timeLimit - prevTime === 3 * 60 && !audioPlayed.current) {
+            const audio = new Audio('/sound/limit2.wav'); // 音声ファイルのパスを指定
+            audio.play();
+            audioPlayed.current = true; // 音声再生済みフラグを立てる
+          }
+          // 残り時間1分前になったら、音声ファイルを再生
+          if (timeLimit - prevTime === 1 * 60 && !audioPlayed.current) {
+            const audio = new Audio('/sound/limit2.wav'); // 音声ファイルのパスを指定
             audio.play();
             audioPlayed.current = true; // 音声再生済みフラグを立てる
           }
