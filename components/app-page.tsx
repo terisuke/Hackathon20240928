@@ -114,23 +114,23 @@ export function AppPage() {
   const generateSummary = async () => {
     setIsGeneratingSummary(true)
     try {
-      const dummySummary = await dummyApiCall(transcript, 1200)
-      setSummary(`タイトル: ${title}\n\n発表者: ${name}\n\n要約:\n${dummySummary}`)
+      const response = await fetch('/api/claude-summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title, transcript, duration: formatTime(time) }),
+      })
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+      setSummary(data.summary)
     } catch (error) {
       console.error('Error generating summary:', error)
-      setSummary('要約の生成中にエラーが発生しました。')
     } finally {
       setIsGeneratingSummary(false)
     }
-  }
-
-  const dummyApiCall = (text: string, maxLength: number): Promise<string> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const dummySummary = `これは「${title}」というタイトルの発表の要約です。発表は${Math.floor(time / 60)}分${time % 60}秒続きました。主な内容は以下の通りです：\n\n1. ポイント1\n2. ポイント2\n3. ポイント3\n\n(ここに実際の要約が入ります。この要約は1200文字以内に制限されています。)`
-        resolve(dummySummary.slice(0, maxLength))
-      }, 2000)
-    })
   }
 
   const increaseTimeLimit = () => {
