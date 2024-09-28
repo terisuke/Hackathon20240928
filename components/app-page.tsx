@@ -73,7 +73,7 @@ export function AppPage() {
         if (prevTime < timeLimit) {
           // 残り時間3分前になったら、音声ファイルを再生
           if (timeLimit - prevTime === 4 * 60 && !audioPlayed.current) {
-            const audio = new Audio('../public/sound/Bell_Accent_High.mp3'); // 音声ファイルのパスを指定
+            const audio = new Audio('/sound/Bell_Accent_High.mp3'); // 音声ファイルのパスを指定
             audio.play();
             audioPlayed.current = true; // 音声再生済みフラグを立てる
           }
