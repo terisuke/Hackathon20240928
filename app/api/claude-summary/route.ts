@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const prompt = `以下は「${title}」というタイトルの発表の文字起こしです。発表は${duration}続きました。下記内容を1200文字以内で要約してください：\n\n${transcript}`
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4", 
+      model: "claude-3-5-sonnet-20240620", 
       messages: [{ role: "user", content: prompt }],
       max_tokens: 6000,  // 1200文字に相当
     })
