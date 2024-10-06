@@ -120,15 +120,11 @@ export function AppPage() {
       if (!apiKey) {
         throw new Error('Dify API key is not set');
       }
-      const apiUrl = process.env.NEXT_PUBLIC_DIFY_API_URL;
-      if (!apiUrl) {
-        throw new Error('Dify API URL is not set');
-      }
 
       // 改行を空白に置き換えて、transcriptsを結合
       const query = transcripts.join(' ').replace(/\n/g, ' ');
 
-      const response = await fetch(`${apiUrl}`, {
+      const response = await fetch('https://api.dify.ai/v1/chat-messages', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
