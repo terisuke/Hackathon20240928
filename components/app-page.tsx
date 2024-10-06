@@ -13,7 +13,7 @@ import { HexColorPicker } from "react-colorful"
 export function AppPage() {
   const [isRunning, setIsRunning] = useState(false)
   const [time, setTime] = useState(0)
-  const [transcript, setTranscript] = useState('')
+  const [transcripts, setTranscripts] = useState<string[]>([])
   const [summary, setSummary] = useState('')
   const [title, setTitle] = useState('')
   const [name, setName] = useState('')
@@ -33,18 +33,17 @@ export function AppPage() {
       recognitionRef.current.interimResults = true
 
       recognitionRef.current.onresult = (event) => {
-        let interimTranscript = ''
         let finalTranscript = ''
 
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
             finalTranscript += event.results[i][0].transcript
-          } else {
-            interimTranscript += event.results[i][0].transcript
           }
         }
 
-        setTranscript(finalTranscript + interimTranscript)
+        if (finalTranscript) {
+          setTranscripts(prev => [...prev, finalTranscript])
+        }
       }
     }
 
@@ -73,7 +72,7 @@ export function AppPage() {
         if (prevTime < timeLimit) {
           // 残り時間3分前になったら、音声ファイルを再生
           if (timeLimit - prevTime === 3 * 60 && !audioPlayed.current) {
-            const audio = new Audio('/sound/limit2.wav'); // 音声ファイルのパスを指定
+            const audio = new Audio('/sound/limit.wav'); // 音声ファイルのパスを指定
             audio.play();
             audioPlayed.current = true; // 音声再生済みフラグを立てる
           }
@@ -106,15 +105,15 @@ export function AppPage() {
   const resetTimer = () => {
     stopTimer()
     setTime(0)
-    setTranscript('')
+    setTranscripts([])
     setSummary('')
-    audioPlayed.current = false; // タイマーリセット時に音声再生済みフラグをリセット
+    audioPlayed.current = false
   }
 
   const generateSummary = async () => {
     setIsGeneratingSummary(true)
     try {
-      const dummySummary = await dummyApiCall(transcript, 1200)
+      const dummySummary = await dummyApiCall(transcripts.join('\n'), 1200)
       setSummary(`タイトル: ${title}\n\n発表者: ${name}\n\n要約:\n${dummySummary}`)
     } catch (error) {
       console.error('Error generating summary:', error)
@@ -238,7 +237,7 @@ export function AppPage() {
           <Textarea
             className="mt-4"
             placeholder="音声認識の結果がここに表示されます"
-            value={transcript}
+            value={transcripts.join('\n')}
             readOnly
             rows={5}
           />
