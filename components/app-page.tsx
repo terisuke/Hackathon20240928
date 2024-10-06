@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Play, Square, RotateCcw, Palette, Plus, RefreshCw } from "lucide-react"
+import { Play, Square, RotateCcw, Palette, Plus } from "lucide-react"
 import { HexColorPicker } from "react-colorful"
 
 export function AppPage() {
@@ -63,32 +63,26 @@ export function AppPage() {
 
   const startTimer = () => {
     setIsRunning(true)
-    audioPlayed.current = false; // タイマー開始時に音声再生済みフラグをリセット
+    audioPlayed.current = false; // タイマ開始時に音声再生済ラグをリセット
     if (recognitionRef.current) {
       recognitionRef.current.start()
     }
     intervalRef.current = setInterval(() => {
       setTime((prevTime) => {
-        if (prevTime < timeLimit) {
-          // 残り時間3分前になったら、音声ファイルを再生
-          if (timeLimit - prevTime === 3 * 60 && !audioPlayed.current) {
-            const audio = new Audio('/sound/limit.wav'); // 音声ファイルのパスを指定
-            audio.play();
-            audioPlayed.current = true; // 音声再生済みフラグを立てる
-          }
-          // 残り時間1分前になったら、音声ファイルを再生
-          if (timeLimit - prevTime === 1 * 60 && !audioPlayed.current) {
-            const audio = new Audio('/sound/limit2.wav'); // 音声ファイルのパスを指定
-            audio.play();
-            audioPlayed.current = true; // 音声再生済みフラグを立てる
-          }
-          return prevTime + 1
-        } else {
-          stopTimer()
-          return timeLimit
+        // 残り時間1分前になったら、音声ファイルを再生
+        if (timeLimit - prevTime === 1 * 60 && !audioPlayed.current) {
+          const audio = new Audio('/sound/warming.wav');
+          audio.play();
+          audioPlayed.current = true;
         }
-      })
-    }, 1000)
+        // タイムリミットに達したら、ベルを再生
+        if (prevTime >= timeLimit) {
+          const endAudio = new Audio('/sound/Bell_Accent_High.mp3');
+          endAudio.play();
+        }
+        return prevTime + 1; // 常にタイマーを継続
+      });
+    }, 1000);
   }
 
   const stopTimer = () => {
@@ -99,57 +93,129 @@ export function AppPage() {
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
     }
-    generateSummary()
+    // generateSummary()の呼び出しを削除
   }
 
-  const resetTimer = () => {
+  const resetAll = () => {
+    // タイマーを停止
     stopTimer()
+    
+    // 各種状態をリセット
+    setTimeLimit(5 * 60)
     setTime(0)
     setTranscripts([])
     setSummary('')
+    setTitle('')
+    setName('')
+    setIsGeneratingSummary(false)
+    
+    // 音声再生フラグをリセット
     audioPlayed.current = false
   }
 
   const generateSummary = async () => {
     setIsGeneratingSummary(true)
     try {
-      const dummySummary = await dummyApiCall(transcripts.join('\n'), 1200)
-      setSummary(`タイトル: ${title}\n\n発表者: ${name}\n\n要約:\n${dummySummary}`)
+      const apiKey = process.env.NEXT_PUBLIC_DIFY_API_KEY;
+      if (!apiKey) {
+        throw new Error('Dify API key is not set');
+      }
+      const apiUrl = process.env.NEXT_PUBLIC_DIFY_API_URL;
+      if (!apiUrl) {
+        throw new Error('Dify API URL is not set');
+      }
+
+      // 改行を空白に置き換えて、transcriptsを結合
+      const query = transcripts.join(' ').replace(/\n/g, ' ');
+
+      const response = await fetch(`${apiUrl}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          inputs: {},
+          query: query, // 修正したqueryを使用
+          response_mode: 'streaming',
+          conversation_id: '',
+          user: 'user-123'
+        })
+      })
+
+      if (response.ok) {
+        const reader = response.body?.getReader()
+        let result = ''
+
+        while (true) {
+          const readResult = await reader?.read()
+          if (!readResult) break
+          const { done, value } = readResult
+
+          if (done) break
+
+          const chunk = new TextDecoder().decode(value)
+          const lines = chunk.split('\n')
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = JSON.parse(line.slice(6))
+              if (data.event === 'message') {
+                result += data.answer
+                // タイトルとスピーカー名を追加して要約を設定
+                setSummary(`# タイトル: ${title}\n#スピーカー: ${name}\n\n${result}`)
+              }
+            }
+          }
+        }
+      } else {
+        console.error('API request failed')
+      }
     } catch (error) {
-      console.error('Error generating summary:', error)
-      setSummary('要約の生成中にエラーが発生しました。')
+      console.error('Error generating summary:', error);
+      setSummary('要約の生成中にエラーが発生しました。');
     } finally {
-      setIsGeneratingSummary(false)
+      setIsGeneratingSummary(false);
     }
   }
 
-  const dummyApiCall = (text: string, maxLength: number): Promise<string> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const dummySummary = `これは「${title}」というタイトルの発表の要約です。発表は${Math.floor(time / 60)}分${time % 60}秒続きました。主な内容は以下の通りです：\n\n1. ポイント1\n2. ポイント2\n3. ポイント3\n\n(ここに実際の要約が入ります。この要約は1200文字以内に制限されています。)`
-        resolve(dummySummary.slice(0, maxLength))
-      }, 2000)
-    })
-  }
 
-  const increaseTimeLimit = () => {
+  const increaseTimeLimit5min = () => {
     setTimeLimit(prevLimit => prevLimit + 5 * 60)
   }
-
-  const resetTimeLimit = () => {
-    setTimeLimit(5 * 60)
+  const increaseTimeLimit1min = () => {
+    setTimeLimit(prevLimit => prevLimit + 1 * 60)
   }
 
   const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = seconds % 60
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+    const absSeconds = Math.abs(seconds)
+    const minutes = Math.floor(absSeconds / 60)
+    const remainingSeconds = absSeconds % 60
+    const sign = seconds < 0 ? '-' : ''
+    return `${sign}${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+  }
+
+  const getTimerDisplay = () => {
+    const remainingTime = timeLimit - time
+    const isOvertime = remainingTime < 0
+
+    return (
+      <div className={`text-4xl font-bold mb-4 ${isOvertime ? 'text-red-600' : ''}`}>
+        {formatTime(remainingTime)}
+      </div>
+    )
+  }
+
+
+  const handleSummaryGeneration = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    generateSummary() // 直接generateSummaryを呼び出す
   }
 
   return (
     <div className="container mx-auto p-4" style={{ '--card-color': cardColor } as React.CSSProperties}>
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">LTファシリシステム</h1>
+        <h1 className="text-2xl font-bold">LT・会議ファシリテーションシステム</h1>
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-10 rounded-full p-0">
@@ -198,13 +264,17 @@ export function AppPage() {
             <div className="flex items-center justify-between">
               <div className="text-sm font-medium">制限時間: {formatTime(timeLimit)}</div>
               <div className="flex space-x-2">
-                <Button onClick={increaseTimeLimit} size="sm">
+                <Button onClick={increaseTimeLimit5min} size="sm">
                   <Plus className="mr-2 h-4 w-4" />
                   5分追加
                 </Button>
-                <Button onClick={resetTimeLimit} size="sm" variant="outline">
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  リセット
+                <Button onClick={increaseTimeLimit1min} size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  1分追加
+                </Button>
+                <Button onClick={resetAll} variant="outline">
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  全てリセット
                 </Button>
               </div>
             </div>
@@ -217,9 +287,7 @@ export function AppPage() {
           <CardTitle>タイムキーパー & 音声認識</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-4xl font-bold mb-4">
-            {formatTime(timeLimit - time)}
-          </div>
+          {getTimerDisplay()}
           <div className="flex space-x-2 mb-4">
             <Button onClick={startTimer} disabled={isRunning}>
               <Play className="mr-2 h-4 w-4" />
@@ -229,10 +297,9 @@ export function AppPage() {
               <Square className="mr-2 h-4 w-4" />
               停止
             </Button>
-            <Button onClick={resetTimer} variant="outline">
-              <RotateCcw className="mr-2 h-4 w-4" />
-              リセット
-            </Button>
+            <Button onClick={handleSummaryGeneration} disabled={isGeneratingSummary}>
+                要約を生成
+              </Button>
           </div>
           <Textarea
             className="mt-4"
