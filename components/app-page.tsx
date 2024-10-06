@@ -238,40 +238,42 @@ export function AppPage() {
           <CardTitle>発表者情報</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid w-full items-center gap-4">
+          <div className="grid w-full gap-4 sm:grid-cols-2">
             <div className="flex flex-col space-y-1.5">
               <Label htmlFor="name">名前</Label>
-              <Input 
-                id="name" 
-                placeholder="発表者の名前" 
+              <Input
+                id="name"
+                placeholder="発表者の名前"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
             <div className="flex flex-col space-y-1.5">
               <Label htmlFor="title">発表タイトル</Label>
-              <Input 
-                id="title" 
-                placeholder="発表のタイトル" 
+              <Input
+                id="title"
+                placeholder="発表のタイトル"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
             </div>
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium">制限時間: {formatTime(timeLimit)}</div>
-              <div className="flex space-x-2">
-                <Button onClick={increaseTimeLimit5min} size="sm">
-                  <Plus className="mr-2 h-4 w-4" />
-                  5分追加
-                </Button>
-                <Button onClick={increaseTimeLimit1min} size="sm">
-                  <Plus className="mr-2 h-4 w-4" />
-                  1分追加
-                </Button>
-                <Button onClick={resetAll} variant="outline">
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  全てリセット
-                </Button>
+            <div className="flex flex-col sm:col-span-2">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">制限時間: {formatTime(timeLimit)}</div>
+                <div className="flex space-x-2">
+                  <Button onClick={increaseTimeLimit5min} size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    5分追加
+                  </Button>
+                  <Button onClick={increaseTimeLimit1min} size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    1分追加
+                  </Button>
+                  <Button onClick={resetAll} variant="outline">
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    全てリセット
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
